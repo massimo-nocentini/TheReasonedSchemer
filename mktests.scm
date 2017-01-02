@@ -1046,16 +1046,16 @@
   `(#t))
 
 ; 3.83
-(define pmembero
-  (lambda (x l)
-    (conde
-      ((nullo l) fail)
-      ((eq-caro l x) (cdro l '()))
-      ((eq-caro l x) succeed)
-      (else 
+    (define pmembero
+     (lambda (x l)
+      (conde
+       ((nullo l) fail)
+       ((eq-caro l x) (cdro l '()))
+       ((eq-caro l x) succeed) ; this answer cover the previous too
+       (else 
         (fresh (d)
-          (cdro l d)
-          (pmembero x d))))))
+         (cdro l d)
+         (pmembero x d))))))
 
 (test-check "3.84"
   (run* (q)
@@ -1064,18 +1064,17 @@
   `(#t #t #t))
 
 ; 3.86
-(define pmembero
-  (lambda (x l)
-    (conde
-      ((nullo l) fail)
-      ((eq-caro l x) (cdro l '()))
-      ((eq-caro l x) 
-       (fresh (a d)
-         (cdro l `(,a . ,d))))
-      (else 
+    (define pmembero
+     (lambda (x l)
+      (conde
+       ((caro l x) (cdro l '()))
+       ((caro l x) (fresh (d)
+                    (cdro l d)
+                    (pairo d)))
+       (else 
         (fresh (d)
-          (cdro l d)
-          (pmembero x d))))))
+         (cdro l d)
+         (pmembero x d))))))
 
 (test-check "3.88"
   (run* (q)
@@ -1100,17 +1099,17 @@
     (_.0 _.1 _.2 _.3 _.4 tofu _.5 . _.6)))
 
 ; 3.93
-(define pmembero
-  (lambda (x l)
-    (conde
-      ((eq-caro l x) 
-       (fresh (a d)
-         (cdro l `(,a . ,d))))
-      ((eq-caro l x) (cdro l '()))
-      (else 
+    (define pmembero
+     (lambda (x l)
+      (conde
+       ((caro l x) (fresh (d)
+                    (cdro l d)
+                    (pairo d)))
+       ((caro l x) (cdro l '()))
+       (else 
         (fresh (d)
-          (cdro l d)
-          (pmembero x d))))))
+         (cdro l d)
+         (pmembero x d))))))
 
 (test-check "3.94"
   (run 12 (l)
@@ -1170,7 +1169,7 @@
     (cond
       ((null? l) #f)
       ((eq-car? l x) l)
-      (else (mem x (cdr l))))))    
+      (else (mem x (cdr l))))))
 
 (test-check "4.1.2"
   (mem 'tofu `(a b tofu d peas e))
@@ -1202,7 +1201,7 @@
   (lambda (x l out)
     (conde
       ((nullo l) fail)
-      ((eq-caro l x) (== l out))
+      ((caro l x) (== l out))
       (else 
         (fresh (d)
           (cdro l d)
@@ -1309,12 +1308,12 @@
             (conso a res out)))))))
 
 ; 4.27
-(define rembero  
-  (lambda (x l out)
-    (conde
-      ((nullo l) (== '() out))
-      ((eq-caro l x) (cdro l out))
-      (else (fresh (a d res)
+    (define rembero  
+     (lambda (x l out)
+      (conde
+       ((nullo l) (== '() out))
+       ((caro l x) (cdro l out))
+       (else (fresh (a d res)
               (conso a d l)
               (rembero x d res)
               (conso a res out))))))
