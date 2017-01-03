@@ -1637,7 +1637,7 @@
 
 ; 5.38
 (define swappendo
-  (lambda (l s out)
+  (lambda-limited 5 (l s out)
     (conde
       (succeed
         (fresh (a d res)
@@ -1646,10 +1646,11 @@
           (swappendo d s res)))
       (else (nullo l) (== s out)))))
 
-(test-divergence "5.39"
+(test-check "5.39"
   (run 1 (z)
     (fresh (x y)
-      (swappendo x y z))))
+      (swappendo x y z)))
+  '((_.0 _.1 _.2 _.3 . _.4)))
 
 ; 5.41.1
 (define unwrap
@@ -1667,14 +1668,14 @@
   `pizza)
 
 ; 5.45
-(define unwrapo
-  (lambda (x out)
-    (conde
-      ((pairo x)
-       (fresh (a)
+    (define unwrapo
+     (lambda (x out)
+      (conde
+       ((pairo x)
+        (fresh (a)
          (caro x a)
          (unwrapo a out)))
-      (else (== x out)))))
+       (else (== x out)))))
 
 (test-check "5.46"
   (run* (x)
@@ -1684,9 +1685,23 @@
     ((pizza))
     (((pizza)))))
 
-(test-divergence "5.48"
-  (run 1 (x)
-    (unwrapo x 'pizza)))
+(define unwrapo
+  (lambda-limited 5 (x out)
+    (conde
+      ((pairo x)
+       (fresh (a)
+         (caro x a)
+         (unwrapo a out)))
+      (else (== x out)))))
+
+(test-check "5.48"
+  (run 6 (x)
+    (unwrapo x 'pizza))
+  '(((((pizza . _.0) . _.1) . _.2) . _.3) 
+      (((pizza . _.0) . _.1) . _.2)
+      ((pizza . _.0) . _.1)
+      (pizza . _.0) 
+      pizza))
 
 (test-divergence "5.49"
   (run 1 (x)
@@ -1702,14 +1717,14 @@
           (caro x a)
           (unwrapo a out))))))
 
-(test-check "5.53"
-  (run 5 (x)
-    (unwrapo x 'pizza))
-  `(pizza
-    (pizza . _.0)
-    ((pizza . _.0) . _.1)
-    (((pizza . _.0) . _.1) . _.2)
-    ((((pizza . _.0) . _.1) . _.2) . _.3)))
+    (test-check "5.53"
+     (run 5 (x)
+      (unwrapo x 'pizza))
+     `(pizza
+         (pizza . _.0)
+         ((pizza . _.0) . _.1)
+         (((pizza . _.0) . _.1) . _.2)
+         ((((pizza . _.0) . _.1) . _.2) . _.3)))
 
 (test-check "5.54"
   (run 5 (x)
