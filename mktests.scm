@@ -1671,10 +1671,9 @@
     (define unwrapo
      (lambda (x out)
       (conde
-       ((pairo x)
-        (fresh (a)
-         (caro x a)
-         (unwrapo a out)))
+       ((pairo x) (fresh (a)
+                   (caro x a) 
+                   (unwrapo a out)))
        (else (== x out)))))
 
 (test-check "5.46"
@@ -1711,7 +1710,7 @@
 (define unwrapo
   (lambda (x out)
     (conde
-      (succeed (== x out))
+      ((== x out) succeed)
       (else 
         (fresh (a)
           (caro x a)
@@ -1760,17 +1759,17 @@
   `(a b c))
 
 ; 5.59
-(define flatteno
-  (lambda (s out)
-    (conde
-      ((nullo s) (== '() out))
-      ((pairo s)
-       (fresh (a d res-a res-d)
-         (conso a d s)
+    (define flatteno
+     (lambda (s out)
+      (conde
+       ((nullo s) (== '() out))
+       ((pairo s)
+        (fresh (a d res-a res-d)
+         (conso a d s) ; destructuring
          (flatteno a res-a)
          (flatteno d res-d)
          (appendo res-a res-d out)))
-      (else (conso s '() out)))))
+       (else (conso s '() out)))))
 
 (test-check "5.60"
   (run 1 (x)
@@ -1819,71 +1818,109 @@
     (((a)) ())
     ((((a))))))
 
-; 5.68.1
-(define flattenogrumblequestion
-  (lambda ()
-    (run* (x)
-      (flatteno '((a b) c) x)) ))
+    (test-check "5.68"
+     (run* (x)
+      (flatteno '((a b) c) x))
+     `((a b c)
+         (a b c ())
+         (a b (c))
+         (a b () c)
+         (a b () c ())
+         (a b () (c))
+         (a (b) c)
+         (a (b) c ())
+         (a (b) (c))
+         ((a b) c)
+         ((a b) c ())
+         ((a b) (c))
+         (((a b) c))))
 
-; 5.68.2
-(define flattenogrumbleanswer
-  `((a b c)
-    (a b c ())
-    (a b (c))
-    (a b () c)
-    (a b () c ())
-    (a b () (c))
-    (a (b) c)
-    (a (b) c ())
-    (a (b) (c))
-    ((a b) c)
-    ((a b) c ())
-    ((a b) (c))
-    (((a b) c))))
-
-(test-check "flattenogrumble"
-  (flattenogrumblequestion)
-  flattenogrumbleanswer)
-
-(test-divergence "5.71"
-  (run* (x)
-    (flatteno x '(a b c))))
-
-; 5.73
-(define flattenrevo
-  (lambda (s out)
-    (conde
-      (succeed (conso s '() out))
-      ((nullo s) (== '() out))
-      (else
+    (define flatteno-limited
+     (lambda-limited 7 (s out)
+      (conde
+       ((nullo s) (== '() out))
+       ((pairo s)
         (fresh (a d res-a res-d)
-          (conso a d s)
-          (flattenrevo a res-a)
-          (flattenrevo d res-d)
-          (appendo res-a res-d out))))))
+         (conso a d s) ; destructuring
+         (flatteno-limited a res-a)
+         (flatteno-limited d res-d)
+         (appendo res-a res-d out)) ; structuring
+       )
+       (else (conso s '() out)))))
 
-(test-check "5.75"
-  (run* (x)
-    (flattenrevo '((a b) c) x))
-  `((((a b) c))
-    ((a b) (c))
-    ((a b) c ())
-    ((a b) c)
-    (a (b) (c))
-    (a (b) c ())
-    (a (b) c)
-    (a b () (c))
-    (a b () c ())
-    (a b () c)
-    (a b (c))
-    (a b c ())
-    (a b c)))
+    (test-check "5.71" ; instead of a divergent test, do a limited one
+     (run* (x)
+      (flatteno-limited x '(a b c)))
+     `((() (a . b) . c) 
+       (() a b . c) 
+       ((() a . b) . c) 
+       ((() . a) b . c) 
+       (((() . a) . b) . c) 
+       (((a) . b) . c) 
+       (((a . b)) . c) 
+       (((a . b) . c)) 
+       ((a) b . c) 
+       ((a () . b) . c) 
+       ((a b) . c) 
+       ((a b . c)) 
+       ((a . b) () . c) 
+       ((a . b) c) 
+       ((a . b) . c) 
+       (a () b . c) 
+       (a (() . b) . c) 
+       (a (b) . c) 
+       (a (b . c)) 
+       (a b () . c) 
+       (a b c) 
+       (a b . c)))
+
+    ; 5.73
+    (define flattenrevo
+     (lambda (s out)
+      (conde
+       ((conso s '() out) succeed)  ; swapping this line with the following 
+       ((nullo s) (nullo out))      ; should produce a list with the same elements
+       (else
+        (fresh (a d res-a res-d)
+         (conso a d s)
+         (flattenrevo a res-a)
+         (flattenrevo d res-d)
+         (appendo res-a res-d out))))))
+
+    (test-check "5.75"
+     (run* (x)
+      (flattenrevo '((a b) c) x))
+     `((((a b) c))
+         ((a b) (c))
+         ((a b) c ())
+         ((a b) c)
+         (a (b) (c))
+         (a (b) c ())
+         (a (b) c)
+         (a b () (c))
+         (a b () c ())
+         (a b () c)
+         (a b (c))
+         (a b c ())
+         (a b c)))
 
 (test-check "5.76"
-  (reverse
-    (run* (x)
-      (flattenrevo '((a b) c) x)))
-  flattenogrumbleanswer)
+ (reverse
+  (run* (x)
+   (flattenrevo '((a b) c) x)))
+ `((a b c)
+     (a b c ())
+     (a b (c))
+     (a b () c)
+     (a b () c ())
+     (a b () (c))
+     (a (b) c)
+     (a (b) c ())
+     (a (b) (c))
+     ((a b) c)
+     ((a b) c ())
+     ((a b) (c))
+     (((a b) c))))
 
 (test-check "5.77"
   (run 2 (x)
@@ -1896,10 +1933,10 @@
     (flattenrevo x '(a b c))))
 
 (test-check "5.80"
-  (length
-    (run* (x)
-      (flattenrevo '((((a (((b))) c))) d) x)))
-  574)
+ (length
+  (run* (x)
+   (flattenrevo '((((a (((b))) c))) d) x)))
+ 574)
 
 ; 6.1
 (define anyo
@@ -1993,6 +2030,9 @@
     (== #t q))
   `(#t))
 
+; A `condi` line that has additional values is not forgotten, this is way this
+; test has not value, even if it doens't wait all the successful goals on a
+; line are exhausted before it tries the next line.
 (test-divergence "6.20"
   (run 2 (q)
     (condi                                                                  
@@ -2003,7 +2043,7 @@
 (test-check "6.21"
   (run 5 (q)
     (condi                                                                  
-      ((== #f q) alwayso)                                              
+      ((== #f q) alwayso) ; `alwayso` succeeds 5 times but contributes no value                                              
       (else (anyo (== #t q)))) 
     (== #t q))
   `(#t #t #t #t #t))
