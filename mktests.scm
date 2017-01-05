@@ -2056,6 +2056,14 @@
       (else fail)))
   `(tea #f cup))
 
+    (test-check "6.24.1"
+     (run 5 (r)
+      (condi
+       ((teacupo r) succeed)
+       ((== #f r) succeed)
+       (else (== r 'last))))
+     `(tea #f cup last))
+
 (test-check "6.25"
   (run 5 (q)
     (condi
@@ -2073,49 +2081,79 @@
       (else fail))
     (== #t q)))
 
-(test-check "6.28"
-  (run 5 (q)                                                                  
-    (conde                                                                     
-      (alwayso succeed)
-      (else nevero))
-    (== #t q))
-  `(#t #t #t #t #t))
-
-(test-divergence "6.30"
-  (run 5 (q)                                                                  
-    (condi                                                                 
-      (alwayso succeed)
-      (else nevero))
-    (== #t q)))
-
-(test-divergence "6.31"
-  (run 1 (q)                                                                  
-    (all
+    (test-check "6.27.1"
+     (run 5 (q)
       (conde
+       (succeed (== #f q))
+       (alwayso (== #t q)) ; this shows that `conde` refreshes even in question part of a line
+       (else fail))
+      (== #t q))
+     `(#t #t #t #t #t))
+
+    (test-divergence "6.27.2"
+     (run 5 (q)
+      (conde
+       (alwayso (== #f q))  ; this line is re-entered infinitely often, so it never 
+                            ; yields control to the next one, according to previous test
+       (alwayso (== #t q))
+       (else fail))
+      (== #t q)))
+
+    (test-check "6.28"
+     (run 5 (q)                                                                  
+      (conde                                                                     
+       (alwayso succeed)
+       (else nevero))
+      (== #t q))
+     `(#t #t #t #t #t))
+
+; after the first `condi` line succeeds, rather than staying on the same
+; `condi` line, namely `(alwayso succeed)`, it tries for more values on the
+; second `condi` line, but that line contains the unsolvable goal `nevero`.
+    (test-divergence "6.30"
+     (run 5 (q)                                                                  
+      (condi                                                                 
+       (alwayso succeed)
+       (else nevero))
+      (== #t q)))
+
+    (test-check "6.30.1"
+     (run 1 (q) ; asking only one value will succeed
+      (condi                                                                 
+       (alwayso succeed)
+       (else nevero))
+      (== #t q))
+     `(#t))
+
+    (test-divergence "6.31"
+     (run 1 (q)                                                                  
+      (all
+       (conde
         ((== #f q) succeed)
         (else (== #t q)))                    
-      alwayso)
-    (== #t q)))
+       alwayso)
+      (== #t q)))
 
-(test-check "6.32"
-  (run 1 (q)                                                                  
-    (alli
-      (conde
+    (test-check "6.32"
+     (run 1 (q)                                                                  
+      (alli
+       (conde
         ((== #f q) succeed)
         (else (== #t q)))                    
-      alwayso)                                                        
-    (== #t q))
-  `(#t))
+       alwayso)                                                        
+      (== #t q))
+     `(#t))
 
-(test-check "6.33"
-  (run 5 (q)
-    (alli
-      (conde
+    (test-check "6.33"
+     (run 5 (q)
+      (alli
+       (conde
         ((== #f q) succeed)
         (else (== #t q)))                    
-      alwayso)                                                        
-    (== #t q))
-  `(#t #t #t #t #t))
+       alwayso) ; `always` succeeds ten times, with the value associated to 
+                ; `q` alternating between `#f` (discarded) and `#t` (kept)
+      (== #t q))
+     `(#t #t #t #t #t))
 
 (test-check "6.34"
   (run 5 (q)
@@ -2200,28 +2238,31 @@
   `((1 1)))
 
 ; 7.12.1
-(define half-addero
-  (lambda (x y r c)
-    (all
-      (bit-xoro x y r)
-      (bit-ando x y c))))
+; spec: (half-addero x y r c) satisfies x + y = r + 2*c, where x, y, r, c in {0, 1}
+    (define half-addero
+     (lambda (x y r c)
+      (all ; it introduces an environment for the following goals
+       (bit-xoro x y r)
+       (bit-ando x y c))))
 
-(test-check "7.12.2"
-  (run* (r)
-    (half-addero 1 1 r 1))
-  (list 0))
+    (test-check "7.12.2"
+     (run* (r)
+      (half-addero 1 1 r 1))
+     (list 0))
 
-(test-check "7.13"
-  (run* (s)
-    (fresh (x y r c)
-      (half-addero x y r c)
-      (== `(,x ,y ,r ,c) s)))
-  `((0 0 0 0)
-    (1 0 1 0)
-    (0 1 1 0)
-    (1 1 0 1)))
+    (test-check "7.13"
+     (run* (s)
+      (fresh (x y r c)
+       (half-addero x y r c)
+       (== `(,x ,y ,r ,c) s)))
+     `((0 0 0 0)
+       (1 0 1 0)
+       (0 1 1 0)
+       (1 1 0 1)))
 
 ; 7.15.1
+; spec: (full-addero b x y r c) satisfies b + x + y = r + 2*c, where b, x, y, r, c in {0, 1}
+; spec: (full-addero b x y r c) succeeds ↔ (equal? (+ b x y) (+ r (* 2 c))) holds, where b, x, y, r, c in {0, 1}
 (define full-addero
   (lambda (b x y r c)
     (fresh (w xy wz)
@@ -2229,15 +2270,15 @@
       (half-addero w b r wz)
       (bit-xoro xy wz c))))
 
-(test-check "7.15.2"
-  (run* (s)
-    (fresh (r c)
-      (full-addero 0 1 1 r c)
-      (== `(,r ,c) s)))
-  (list `(0 1)))
+    (test-check "7.15.2"
+     (run* (s)
+      (fresh (r c)
+       (full-addero 0 1 1 r c)
+       (== `(,r ,c) s)))
+     (list `(0 1)))
 
 ; 7.15.3
-(define full-addero
+#;(define full-addero
   (lambda (b x y r c)
     (conde
       ((== 0 b) (== 0 x) (== 0 y) (== 0 r) (== 0 c))
@@ -2250,38 +2291,41 @@
       ((== 1 b) (== 1 x) (== 1 y) (== 1 r) (== 1 c))
       (else fail))))
 
-(test-check "7.16"
-  (run* (s)
-    (fresh (r c)
-      (full-addero 1 1 1 r c)
-      (== `(,r ,c) s)))
-  (list `(1 1)))
+    (test-check "7.16"
+     (run* (s)
+      (fresh (r c)
+       (full-addero 1 1 1 r c)
+       (== `(,r ,c) s)))
+     (list `(1 1)))
 
-(test-check "7.17"
-  (run* (s)
-    (fresh (b x y r c)
-      (full-addero b x y r c)
-      (== `(,b ,x ,y ,r ,c) s)))
-  `((0 0 0 0 0)
-    (1 0 0 1 0)
-    (0 1 0 1 0)
-    (1 1 0 0 1)
-    (0 0 1 1 0)
-    (1 0 1 0 1)
-    (0 1 1 0 1)
-    (1 1 1 1 1)))
+    (test-check "7.17"
+     (run* (s)
+      (fresh (b x y r c)
+       (full-addero b x y r c)
+       (== `(,b ,x ,y ,r ,c) s)))
+     `((0 0 0 0 0)
+       (1 0 0 1 0)
+       (0 1 0 1 0)
+       (1 1 0 0 1)
+       (0 0 1 1 0)
+       (1 0 1 0 1)
+       (0 1 1 0 1)
+       (1 1 1 1 1)))
 
 ; 7.43
-(define build-num
-  (lambda (n)
-    (cond
-      ((zero? n) '())
-      ((and (not (zero? n)) (even? n))
-       (cons 0
-         (build-num (quotient n 2))))
-      ((odd? n)
-       (cons 1
-         (build-num (quotient (- n 1) 2)))))))
+    (define build-num
+     (lambda (n)
+      ; for any integer number `n`, one and only one question is true 
+      ; in the following `cond` form, therefore we can rearrange 
+      ; `cond` lines in any order; they are *non-overlapping*,
+      ; thank you, Edsger Dijkstra. 
+      (cond
+       ((zero? n) '())
+       ; ((and (not (zero? n)) (even? n))
+       ((and (positive? n) (even? n)) ; enforce the __non-overlapping property__
+        (cons 0 (build-num (quotient n 2))))
+       ((odd? n)
+        (cons 1 (build-num (quotient (- n 1) 2)))))))
 
 (test-check "7.25"
   `(1 0 1) 
@@ -2319,17 +2363,27 @@
   (build-num 19)
   `(1 1 0 0 1))
 
+(test-check "map build-num to prime numbers"
+ (map build-num '(2 3 5 7 11 13 17))
+ `((0 1) 
+     (1 1)
+     (1 0 1)
+     (1 1 1)
+     (1 1 0 1)
+     (1 0 1 1)
+     (1 0 0 0 1)))
+
 ; 7.44
-(define build-num
-  (lambda (n)
-    (cond
-      ((odd? n)
-       (cons 1
-         (build-num (quotient (- n 1) 2))))    
-      ((and (not (zero? n)) (even? n))
-       (cons 0
-         (build-num (quotient n 2))))
-      ((zero? n) '()))))
+    (define build-num
+     (lambda (n)
+      ; maintaining the __non-overlapping property__, it is possible to swap
+      ; `cond` lines as desired.
+      (cond
+       ((odd? n)
+        (cons 1 (build-num (quotient (- n 1) 2))))    
+       ((and (not (zero? n)) (even? n))
+        (cons 0 (build-num (quotient n 2))))
+       ((zero? n) '()))))
 
 ; 7.80.1
 (define poso
