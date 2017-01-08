@@ -2385,58 +2385,58 @@
         (cons 0 (build-num (quotient n 2))))
        ((zero? n) '()))))
 
-; 7.80.1
-(define poso
-  (lambda (n)
-    (fresh (a d)
-      (== `(,a . ,d) n))))
+    ; 7.80.1
+    (define poso
+     (lambda (n)
+      (fresh (a d)
+       (== `(,a . ,d) n))))
 
-(test-check "7.80.2"
-  (run* (q)
-    (poso '(0 1 1))
-    (== #t q))
-  (list #t))
+    (test-check "7.80.2"
+     (run* (q)
+      (poso '(0 1 1))
+      (== #t q))
+     (list #t))
 
-(test-check "7.81"
-  (run* (q)
-    (poso '(1))
-    (== #t q))
-  (list #t))
+    (test-check "7.81"
+     (run* (q)
+      (poso '(1))
+      (== #t q))
+     (list #t))
 
-(test-check "7.82"
-  (run* (q)
-    (poso '())
-    (== #t q))
-  `())
+    (test-check "7.82"
+     (run* (q)
+      (poso '())
+      (== #t q))
+     `())
 
-(test-check "7.83"
-  (run* (r)
-    (poso r))
-  (list `(_.0 . _.1)))
+    (test-check "7.83"
+     (run* (r)
+      (poso r))
+     (list `(_.0 . _.1)))
 
-; 7.86.1
-(define >1o
-  (lambda (n)
-    (fresh (a ad dd)
-      (== `(,a ,ad . ,dd) n))))
+    ; 7.86.1
+    (define >1o
+      (lambda (n)
+        (fresh (a ad dd)
+          (== `(,a ,ad . ,dd) n))))
 
-(test-check "7.86.2"
-  (run* (q)
-    (>1o '(0 1 1))
-    (== #t q))
-  (list #t))
+    (test-check "7.86.2"
+      (run* (q)
+        (>1o '(0 1 1))
+        (== #t q))
+      (list #t))
 
-(test-check "7.87"
-  (run* (q)
-    (>1o '(0 1))
-    (== #t q))
-  `(#t))
+    (test-check "7.87"
+     (run* (q)
+      (>1o '(0 1))
+      (== #t q))
+     `(#t))
 
-(test-check "7.88"
-  (run* (q)
-    (>1o '(1))
-    (== #t q))
-  `())
+    (test-check "7.88"
+     (run* (q)
+      (>1o '(1))
+      (== #t q))
+     `())
 
 (test-check "7.89"
   (run* (q)
@@ -2450,25 +2450,24 @@
   (list `(_.0 _.1 . _.2)))
 
 ; 7.118.1
-(define addero
-  (lambda (d n m r)
-    (condi
-      ((== 0 d) (== '() m) (== n r))
-      ((== 0 d) (== '() n) (== m r)
-       (poso m))
-      ((== 1 d) (== '() m)
-       (addero 0 n '(1) r))
-      ((== 1 d) (== '() n) (poso m)
-       (addero 0 '(1) m r))
-      ((== '(1) n) (== '(1) m)
-       (fresh (a c)
+; (addero d n m r) succeeds ↔ (equal? (+ d n m) r) holds, 
+; where d is a bit and n, m, r are numbers
+    (define addero
+     (lambda (d n m r)
+      (condi
+       ((== 0 d) (== '() m) (== n r))
+       ((== 0 d) (== '() n) (poso m) (== m r))
+       ((== 1 d) (== '() m) (addero 0 n '(1) r))
+       ((== 1 d) (== '() n) (poso m) (addero 0 '(1) m r))
+       ((== '(1) n) (== '(1) m)
+        (fresh (a c)
          (== `(,a ,c) r)
          (full-addero d 1 1 a c)))
-      ((== '(1) n) (gen-addero d n m r))
-      ((== '(1) m) (>1o n) (>1o r)
-       (addero d '(1) n r))
-      ((>1o n) (gen-addero d n m r))
-      (else fail))))
+       ((== '(1) n) (gen-addero d n m r))
+       ((== '(1) m) (>1o n) (>1o r)
+        (addero d '(1) n r))
+       ((>1o n) (gen-addero d n m r))
+       (else fail))))
 
 ; 7.118.2
 (define gen-addero
@@ -2573,27 +2572,27 @@
   `())
 
 ; 8.10
-(define *o
-  (lambda (n m p)
-    (condi
-      ((== '() n) (== '() p))
-      ((poso n) (== '() m) (== '() p))  
-      ((== '(1) n) (poso m) (== m p))   
-      ((>1o n) (== '(1) m) (== n p))
-      ((fresh (x z)
+    (define *o
+     (lambda (n m p)
+      (condi
+       ((== '() n) (== '() p))
+       ((poso n) (== '() m) (== '() p))  
+       ((== '(1) n) (poso m) (== m p))   
+       ((>1o n) (== '(1) m) (== n p))
+       ((fresh (x z)
          (== `(0 . ,x) n) (poso x)
          (== `(0 . ,z) p) (poso z)
          (>1o m)
          (*o x m z)))
-      ((fresh (x y)
+       ((fresh (x y)
          (== `(1 . ,x) n) (poso x)
          (== `(0 . ,y) m) (poso y)
          (*o m n p)))
-      ((fresh (x y)
-          (== `(1 . ,x) n) (poso x)      
-          (== `(1 . ,y) m) (poso y)
-          (odd-*o x n m p)))
-      (else fail))))
+       ((fresh (x y)
+         (== `(1 . ,x) n) (poso x)      
+         (== `(1 . ,y) m) (poso y)
+         (odd-*o x n m p)))
+       (else fail))))
 
 ; 8.18
 (define odd-*o

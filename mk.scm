@@ -38,36 +38,36 @@
   
 (define empty-s '())
 
-(define walk
-  (lambda (v s)
-    (cond
-      ((var? v)
-       (cond
+    (define walk
+     (lambda (v s)
+      (cond
+       ((var? v)
+        (cond
          ((assq v s) =>
           (lambda (a)
-	    (let ((v^ (rhs a)))
-	      (walk v^ s))))
+           (let ((v^ (rhs a)))
+            (walk v^ s))))
          (else v)))
-      (else v))))
+       (else v))))
 
 (define ext-s
   (lambda (x v s)
     (cons `(,x . ,v) s)))
 
-(define unify
-  (lambda (v w s)
-    (let ((v (walk v s))
-          (w (walk w s)))
-      (cond
+    (define unify
+     (lambda (v w s)
+      (let ((v (walk v s))
+            (w (walk w s)))
+       (cond
         ((eq? v w) s)
         ((var? v) (ext-s v w s))
         ((var? w) (ext-s w v s))
         ((and (pair? v) (pair? w))
          (cond
-           ((unify (car v) (car w) s) =>
-            (lambda (s)
-              (unify (cdr v) (cdr w) s)))
-           (else #f)))
+          ((unify (car v) (car w) s) =>
+           (lambda (s)
+            (unify (cdr v) (cdr w) s)))
+          (else #f)))
         ((equal? v w) s)
         (else #f)))))
 
