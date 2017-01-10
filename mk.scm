@@ -43,16 +43,16 @@
       (cond
        ((var? v)
         (cond
-         ((assq v s) =>
-          (lambda (a)
-           (let ((v^ (rhs a)))
-            (walk v^ s))))
+         ((assq v s) => (lambda (a)
+                         (let ((v^ (rhs a)))
+                          (walk v^ s))))
          (else v)))
        (else v))))
 
-(define ext-s
-  (lambda (x v s)
-    (cons `(,x . ,v) s)))
+    (define ext-s
+     (lambda (x v s)
+      (cons `(,x . ,v) s))) ; to put emphasis on the association structure
+      ;(cons (cons x v) s)))
 
     (define unify
      (lambda (v w s)

@@ -3211,7 +3211,7 @@
 
 (cout "This next test takes several minutes to run!" nl)
 
-(test-check "8.96"
+#;(test-check "8.96"
   (run 8 (s)
     (fresh (b q r)
       (logo '(0 0 1 0 0 0 1) b q r)
@@ -3231,7 +3231,7 @@
   (lambda (b q n)
     (logo n b q '())))
 
-(test-check "8.92"
+#;(test-check "8.92"
   (run* (t)
     (expo '(1 1) '(1 0 1) t))
   (list `(1 1 0 0 1 1 1 1)))
@@ -3345,6 +3345,16 @@
     (let ((r (walk* x s)))
       (walk* r (reify-s r empty-s))))
   `(a _.0 c _.0))
+
+    (let ((s `((,y . (,z ,w c ,w)) (,x . ,y) (,z . a))))
+     (let* ((r (walk* x s)) 
+            (r-reified (reify-s r empty-s))
+            (rr (walk* r r-reified)))
+      (display "understanding 9.56")
+      (pp r)
+      (pp r-reified)
+      (pp rr)
+      rr))
 
 (test-check "9.58"
   (let ((s `((,y . (,z ,w c ,w)) (,x . ,y) (,z . a))))
